@@ -1,3 +1,6 @@
+"use server";
+
+import { revalidatePath } from "next/cache";
 import Thread from "../models/thread.model";
 import User from "../models/user.model";
 import { connectToDB } from "../mongoose";
@@ -15,16 +18,53 @@ export async function createThread({
   communityId,
   path,
 }: Params) {
+  try {
+    connectToDB();
+
+    const createdThread = await Thread.create({
+      text,
+      author,
+      community: null,
+    });
+
+    // update user model
+    await User.findByIdAndUpdate(author, {
+      $push: { threads: createdThread._id },
+    });
+
+    revalidatePath(path);
+  } catch (error: any) {
+    throw new Error(`Error creating thread: ${error}`);
+  }
+}
+
+export async function fetchPosts(pageNumber = 1, pageSize = 20) {
   connectToDB();
 
-  const createdThread = await Thread.create({
-    text,
-    author,
-    community: null,
+  //calc numver of posts to skip
+  const skipAmount = (pageNumber - 1) * pageSize;
+
+  // Fetch the posts that have no parents (top level threads/no comments )
+  const postsQuery = Thread.find({ parentId: [null, undefined] })
+    .sort({ createdAt: "desc" })
+    .skip(skipAmount)
+    .limit(pageSize)
+    .populate({ path: "author", model: "User" })
+    .populate({
+      path: "children",
+      populate: {
+        path: "author",
+        model: User,
+        select: "_id name parentId image",
+      },
+    });
+
+  const totalPostsCount = await Thread.countDocuments({
+    parentId: [null, undefined],
   });
 
-  // update user model
-  await User.findByIdAndUpdate(author, {
-    $push: { threads: createdThread._id },
-  });
+  const posts = await postsQuery.exec();
+  const isNext = totalPostsCount > skipAmount + posts.length;
+
+  return { posts, isNext };
 }
