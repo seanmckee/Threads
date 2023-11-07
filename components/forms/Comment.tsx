@@ -20,6 +20,7 @@ import { Input } from "../ui/input";
 // import { updateUser } from "@/lib/actions/user.actions";
 import { usePathname, useRouter } from "next/navigation";
 import path from "path";
+import Image from "next/image";
 // import { createThread } from "@/lib/actions/thread.actions";
 
 interface Props {
@@ -54,19 +55,22 @@ const Comment = ({ threadId, currentUserImg, currentUserId }: Props) => {
   return (
     <div>
       <Form {...form}>
-        <form
-          onSubmit={form.handleSubmit(onSubmit)}
-          className="mt-10 flex flex-col justify-start gap-10"
-        >
+        <form onSubmit={form.handleSubmit(onSubmit)} className="comment-form">
           <FormField
             control={form.control}
             name="thread"
             render={({ field }) => (
               <FormItem className="flex gap-3 w-full flex-col">
                 <FormLabel className="text-base-semibold text-light-2">
-                  Content
+                  <Image
+                    src={currentUserImg}
+                    alt="Profile image"
+                    width={48}
+                    height={48}
+                    className="rounded-full object-cover"
+                  />
                 </FormLabel>
-                <FormControl className="no-focus border border-dark-4 bg-dark-3 text-light-1">
+                <FormControl className="border-none bg-transparent">
                   <Input
                     type="text"
                     placeholder="Comment..."
